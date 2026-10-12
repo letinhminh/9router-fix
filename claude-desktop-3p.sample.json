@@ -1,0 +1,46 @@
+{
+  "inferenceGatewayBaseUrl": "http://127.0.0.1:20128/v1",
+  "inferenceGatewayApiKey": "sk-YOUR_9ROUTER_KEY_HERE",
+  "isDesktopExtensionEnabled": true,
+  "inferenceModels": [
+    {
+      "name": "claude-1M-free",
+      "supports1m": true,
+      "labelOverride": "Opus 1M (Gemini Flash + CMC)",
+      "prefer1m": true,
+      "anthropicFamilyTier": "opus",
+      "isFamilyDefault": true
+    },
+    {
+      "name": "claude-command-code",
+      "supports1m": true,
+      "labelOverride": "Sonnet (Gemini Flash)",
+      "prefer1m": true,
+      "anthropicFamilyTier": "sonnet"
+    },
+    {
+      "name": "claude-cc-laguna",
+      "anthropicFamilyTier": "haiku",
+      "labelOverride": "Laguna 2.1"
+    },
+    {
+      "name": "claude-gem",
+      "labelOverride": "Gemini Flash"
+    }
+  ],
+  "disableEssentialTelemetry": true,
+  "disableNonessentialTelemetry": true,
+  "disableNonessentialServices": true,
+  "managedMcpServers": [
+    {
+      "name": "exa",
+      "transport": "http",
+      "url": "https://mcp.exa.ai/mcp"
+    }
+  ],
+  "coworkEgressAllowedHosts": [
+    "*"
+  ],
+  "inferenceProvider": "gateway",
+  "inferenceCredentialKind": "static"
+}

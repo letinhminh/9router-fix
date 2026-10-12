@@ -1,0 +1,37 @@
+{
+  "env": {
+    "CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN": "1",
+    "CLAUDE_CODE_AUTO_MODE_SERVER": "0",
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:20128/v1",
+    "ANTHROPIC_AUTH_TOKEN": "sk-YOUR_9ROUTER_KEY_HERE",
+    "ANTHROPIC_MODEL": "claude-1M-free",
+    "ANTHROPIC_SMALL_FAST_MODEL": "claude-1M-free",
+    "ANTHROPIC_DEFAULT_FABLE_MODEL": "claude-1M-free",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-1M-free",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-1M-free",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "claude-1M-free",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "claude-1M-free"
+  },
+  "modelPicker": {
+    "options": [
+      {
+        "model": "claude-1M-free",
+        "label": "claude-1M-free (Gemini + CMC)",
+        "description": "9router combo 1M context",
+        "behavesAs": "claude-sonnet-4-6"
+      },
+      {
+        "model": "claude-command-code",
+        "label": "claude-command-code (Gemini Flash)",
+        "description": "Fast & tool-enabled",
+        "behavesAs": "claude-sonnet-4-6"
+      },
+      {
+        "model": "claude-cc-laguna",
+        "label": "claude-cc-laguna (Laguna 2.1)",
+        "description": "Poolside Laguna reasoning",
+        "behavesAs": "claude-sonnet-4-6"
+      }
+    ]
+  }
+}
