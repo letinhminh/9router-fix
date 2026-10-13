@@ -33,9 +33,9 @@ OpenCode (`https://opencode.ai/zen/v1/...`) cung cấp các model miễn phí th
 
 | Tiêu chí | Yêu cầu bắt buộc | Nếu vi phạm | Cách 9Router xử lý đúng |
 |---|---|---|---|
-| **1. User-Agent** | Dạng `opencode/<major>.<minor>.<patch>` với version $\ge 1.17.0$ (chuẩn là `opencode/1.18.31`). | `403 FreeTierError` hoặc `426 Upgrade Required` | Chặn các User-Agent lạ/ngoài, ép gửi `opencode/1.18.31`. |
-| **2. Session ID (`x-opencode-session`)** | Khớp regex `/^ses_[0-9a-f]{12}[0-9A-Za-z]{14}$/` (tiền tố `ses_` + 12 ký tự hex timestamp + 14 ký tự Base62). | `403 FreeTierError` | Tự động sinh ID theo timestamp bitwise hoặc hash phiên làm việc của client thành chuẩn base62. |
-| **3. Request ID (`x-opencode-request`)** | Khớp regex `/^msg_[0-9a-f]{12}[0-9A-Za-z]{14}$/`. | Lỗi request không hợp lệ | Tự động sinh ID chuẩn với tiền tố `msg_`. |
+| **1. User-Agent** | Dạng `opencode/<major>.<minor>.<patch>` với version mới (chuẩn `opencode/1.19.0 ai-sdk/provider-utils/4.0.40 runtime/bun/1.3.14`). | `403 FreeTierError` hoặc `426 Upgrade Required` | Chặn các User-Agent lạ/ngoài, ép gửi `opencode/1.19.0 ...`. |
+| **2. Session ID (`x-opencode-session`)** | Khớp `/^ses_[0-9a-f]{12}[0-9A-Za-z]{14}$/`, trong đó **12 ký tự hex đầu tiên BẮT BUỘC là bitwise NOT của `(BigInt(Date.now()) * 4096n + counter)`** (monotonic descending timestamp chuẩn `Identifier.descending("session")` của OpenCode). | `403 FreeTierError` | Không được dùng 6 byte SHA-256 thô làm prefix hex! Phải sinh prefix từ `~(4096n * BigInt(Date.now()) + BigInt(y))` và lưu cache trong `Map` theo key hội thoại. |
+| **3. Request ID (`x-opencode-request`)** | Khớp `/^msg_[0-9a-f]{12}[0-9A-Za-z]{14}$/`, trong đó **12 ký tự hex đầu tiên là `(BigInt(Date.now()) * 4096n + counter)`** (ascending timestamp chuẩn `Identifier.ascending("message")`). | `403 FreeTierError` | Sinh 6 byte đầu từ `4096n * BigInt(Date.now()) + 1n` thay vì `Math.floor(Date.now()/1000)` 32-bit. |
 | **4. Tool Fingerprint Quartet** | Request **BẮT BUỘC** phải chứa các tool chuẩn của client OpenCode: `["bash", "read", "glob", "grep"]`. | `403 FreeTierError` | 9Router **PHẢI LUÔN LUÔN MERGE** bộ 4 tool này vào body request, **KỂ CẢ KHI CLIENT ĐÃ CÓ TOOLS RIÊNG** (ví dụ Claude Code gửi 115 tools). |
 | **5. Tool Naming Convention** | Tên tool chỉ được chứa `^[a-zA-Z0-9_-]+$`. MCP tools thường có dấu `:` (ví dụ `mcp:fs:read`). | `400 invalid_request_error: name must match ^[a-zA-Z0-9_-]+$` | Thay thế toàn bộ ký tự đặc biệt ngoài `[a-zA-Z0-9_-]` bằng dấu `_`. |
 | **6. Tool Choice** | Responses API (`/zen/v1/responses`) **chỉ hỗ trợ duy nhất `"auto"`**. | `400 invalid_request_error: only "auto" is supported for tool_choice` | Luôn ép `tool_choice = "auto"`. |
@@ -51,7 +51,7 @@ OpenCode (`https://opencode.ai/zen/v1/...`) cung cấp các model miễn phí th
 ### Lỗi 1: Tràn Context Do Không Clamp Cận Trên `max_output_tokens`
 Khi hội thoại dài (1000+ MSG, 200k+ tokens), client hoặc combo yêu cầu 1M tokens làm $250.000 + 1.048.576 > 1.048.576$. OpenCode Console trả về:
 `400: The request contains invalid parameters. Check the request body for any errors or inconsistencies.`
-$\rightarrow$ **Khắc phục:** Clamp `16 <= max_output_tokens <= 65536` trong `318.js`.
+$\rightarrow$ **Khắc phục:** Clamp `16 <= max_output_tokens <= 65536` trong `318.js` / `5330.js`.
 
 ### Lỗi 2: Combo Bị Chết Sớm Do Không Fallback Khi Model Trả 400 (`no fallback`)
 Mặc định 9Router coi mã 400 là client syntax error nên dừng hẳn combo, không gọi tiếp model 2/5, 3/5 trong danh sách fallback.
@@ -59,10 +59,10 @@ $\rightarrow$ **Khắc phục:** Trong `8910.js`, nếu model $k$ trả về l�
 
 ### Lỗi 3: Lỗi Lịch Sử Tool Calls Trong Phiên Claude Code Dài (Orphan Calls / Outputs)
 Khi Claude Code nén lịch sử (`/compact`) hoặc chạy subagents, các cặp `tool_use` và `tool_result` có thể bị cắt nửa hoặc sai lệch `call_id`.
-$\rightarrow$ **Khắc phục:** Viết bộ lọc ghép cặp trong `318.js`: tự động loại bỏ orphan output và bù dummy output cho orphan call trước khi đẩy lên OpenCode.
+$\rightarrow$ **Khắc phục:** Viết bộ lọc ghép cặp trong `318.js` / `5330.js`: tự động loại bỏ orphan output và bù dummy output cho orphan call trước khi đẩy lên OpenCode.
 
 ### Lỗi 4: Tự Động Dump Lỗi Debug Khi Upstream Thất Bại
-Khi OpenCode trả về bất kỳ mã lỗi nào ($\ne 200$), `318.js` tự động ghi lại toàn bộ request body, headers và response text vào `/tmp/last_opencode_failed_request.json` để agent kiểm tra ngay lập tức.
+Khi OpenCode trả về bất kỳ mã lỗi nào ($\ne 200$), `318.js` / `5330.js` tự động ghi lại toàn bộ request body, headers và response text vào `/tmp/last_opencode_failed_request.json` để agent kiểm tra ngay lập tức.
 
 ### Lỗi 5: Combo Không Fallback Vì Index Bị Shadow (`8910.js`)
 Patch cũ dùng `if(!i&&b<o.length-1)i=!0`, nhưng biến `b` (index vòng lặp) bị **shadow** bởi `let b=await c(a,e)` (response) → điều kiện luôn false, combo chết sớm. Đã sửa: capture index vào `_ci` trước khi shadow (`let e=o[b],_ci=b`) và dùng `if(!i&&_ci<o.length-1)i=!0`.
@@ -72,6 +72,11 @@ Khi Claude Code gửi `thinking:disabled`, translator map thành `reasoning_effo
 
 ### Lỗi 7: Response Non-stream Không Convert Sang Anthropic (`8895.js`)
 Với provider `forceStream` (OpenCode), khi client yêu cầu non-stream, nhánh `!stream && forceStream` build `chat.completion` nhưng **không convert sang Anthropic**. Claude Code auto-mode classifier là client non-stream duy nhất → nhận body sai format → `TypeError ... e.filter` → "auto mode classifier unavailable" (fail closed, chặn WebSearch/Bash). Đã thêm hàm `_cc` (OpenAI→Anthropic) và áp ở cả 2 nhánh trả về (responses branch dùng `c`, chat branch dùng `p`), đồng thời cho phép convert từ `openai-responses`.
+
+### Lỗi 8: OpenCode `403 FreeTierError` Do Giải Mã Timestamp Trong `x-opencode-session` (`318.js` / `5330.js`, Patch #13)
+Từ bản `opencode 1.19.0` (commit `83f2b6f6` trên OpenCode Console), Zen inference proxy giải mã 6 byte đầu (12 ký tự hex) của `x-opencode-session` (`ses_<12-hex><14-base62>`) và `x-opencode-request` (`msg_<12-hex><14-base62>`) để kiểm tra tính hợp lệ của timestamp.
+- Trong 9Router gốc, khi request có session key hoặc multi-turn messages, hàm `B(a, b="")` băm SHA-256 chuỗi hội thoại rồi lấy thẳng 6 byte đầu của SHA-256 (`c.subarray(0,6).toString("hex")`) ghép vào sau `ses_`. Khi proxy giải mã 6 byte ngẫu nhiên này bằng phép đảo bit `~BigInt("0x" + hex) >> 12n`, nó ra một mốc thời gian vô nghĩa (năm 50.000 hoặc âm), lập tức đánh trượt với lỗi `403 FreeTierError: OpenCode's free tier can only be used from within OpenCode`.
+- $\rightarrow$ **Khắc phục (Patch #13):** Sửa `B(a, b="")` để vẫn dùng SHA-256 cho 14 ký tự Base62 hậu tố (giữ tính định danh), nhưng 12 ký tự hex đầu tiên được sinh đúng chuẩn `~(4096n * BigInt(Date.now()) + BigInt(y))` và lưu cache trong `Map` `D` theo key hội thoại (TTL 30 phút). Đồng thời sửa `opencode-req` (`msg_`) dùng `4096n * BigInt(Date.now()) + 1n` và nâng `User-Agent` lên `opencode/1.19.0`.
 
 ---
 

@@ -142,7 +142,14 @@ for (const file of files) {
   const newInputFilter = `b.tool_choice="auto",delete b.messages,delete b.system,Array.isArray(b.input)&&(()=>{let cl=[],cb=new Map,ob=new Map;for(let a of b.input){if(!a||"object"!=typeof a||Array.isArray(a)||"reasoning"===a.type)continue;delete a.encrypted_content,delete a.reasoning_encrypted_content;if("message"===a.type){if("user"!==a.role&&"assistant"!==a.role)continue;if(!Array.isArray(a.content)||0===a.content.length)continue;let exp="user"===a.role?"input_text":"output_text",vc=[];for(let b of a.content){if(!b||"object"!=typeof b)continue;if("user"===a.role&&"input_image"===b.type)vc.push(b);else if("string"==typeof b.text&&b.text.length>0)vc.push({type:exp,text:b.text})}vc.length>0&&(a.content=vc,cl.push(a))}else if("function_call"===a.type){let name=("string"==typeof a.name?a.name:"").replace(/[^a-zA-Z0-9_-]/g,"_").trim().slice(0,128);if(!name)continue;a.name=name,a.call_id=(0,n.N8)(a.call_id),a.arguments=(0,n.We)(a.arguments);cb.set(a.call_id,a),cl.push(a)}else if("function_call_output"===a.type){a.call_id=(0,n.N8)(a.call_id),a.output=(0,n.DP)(a.output);ob.set(a.call_id,a),cl.push(a)}}let fi=[];for(let a of cl){if("function_call_output"===a.type){cb.has(a.call_id)&&fi.push(a)}else if("function_call"===a.type){fi.push(a);ob.has(a.call_id)||(fi.push({type:"function_call_output",call_id:a.call_id,output:"{}"}),ob.set(a.call_id,!0))}else fi.push(a)}b.input=fi.length>0?fi:[{type:"message",role:"user",content:[{type:"input_text",text:"..."}]}];})(),w(b,!0)`;
   if (content.includes(oldInputFilter)) {
     content = content.replace(oldInputFilter, newInputFilter);
-    console.log(`[FIX] Replaced b.input filter with robust Responses API sanitizer in ${file}`);
+    console.log(`[FIX] Replaced b.input filter with robust Responses API sanitizer (0.5.91) in ${file}`);
+    modified = true;
+  }
+  const oldInputFilter95 = `Array.isArray(b.input)&&(b.input=b.input.filter(a=>!!(!a||"object"!=typeof a||Array.isArray(a))||"reasoning"!==a.type&&((delete a.encrypted_content,delete a.reasoning_encrypted_content,"function_call"===a.type)?!!a.name&&"string"==typeof a.name&&""!==a.name.trim()&&(a.name=a.name.trim().slice(0,128),a.call_id=(0,o.N8)(a.call_id),a.arguments=(0,o.We)(a.arguments),!0):("function_call_output"===a.type&&(a.call_id=(0,o.N8)(a.call_id),a.output=(0,o.DP)(a.output)),!0)))),(0,m.Ke)(b,!0)`;
+  const newInputFilter95 = `b.tool_choice="auto",delete b.messages,delete b.system,Array.isArray(b.input)&&(()=>{let cl=[],cb=new Map,ob=new Map;for(let a of b.input){if(!a||"object"!=typeof a||Array.isArray(a)||"reasoning"===a.type)continue;delete a.encrypted_content,delete a.reasoning_encrypted_content;if("message"===a.type){if("user"!==a.role&&"assistant"!==a.role)continue;if(!Array.isArray(a.content)||0===a.content.length)continue;let exp="user"===a.role?"input_text":"output_text",vc=[];for(let b of a.content){if(!b||"object"!=typeof b)continue;if("user"===a.role&&"input_image"===b.type)vc.push(b);else if("string"==typeof b.text&&b.text.length>0)vc.push({type:exp,text:b.text})}vc.length>0&&(a.content=vc,cl.push(a))}else if("function_call"===a.type){let name=("string"==typeof a.name?a.name:"").replace(/[^a-zA-Z0-9_-]/g,"_").trim().slice(0,128);if(!name)continue;a.name=name,a.call_id=(0,o.N8)(a.call_id),a.arguments=(0,o.We)(a.arguments);cb.set(a.call_id,a),cl.push(a)}else if("function_call_output"===a.type){a.call_id=(0,o.N8)(a.call_id),a.output=(0,o.DP)(a.output);ob.set(a.call_id,a),cl.push(a)}}let fi=[];for(let a of cl){if("function_call_output"===a.type){cb.has(a.call_id)&&fi.push(a)}else if("function_call"===a.type){fi.push(a);ob.has(a.call_id)||(fi.push({type:"function_call_output",call_id:a.call_id,output:"{}"}),ob.set(a.call_id,!0))}else fi.push(a)}b.input=fi.length>0?fi:[{type:"message",role:"user",content:[{type:"input_text",text:"..."}]}];})(),(0,m.Ke)(b,!0)`;
+  if (content.includes(oldInputFilter95)) {
+    content = content.replace(oldInputFilter95, newInputFilter95);
+    console.log(`[FIX] Replaced b.input filter with robust Responses API sanitizer (0.5.95) in ${file}`);
     modified = true;
   }
 
@@ -152,6 +159,34 @@ for (const file of files) {
   if (content.includes(oldExecute)) {
     content = content.replace(oldExecute, newExecute);
     console.log(`[FIX] Added failure dumper to execute() in ${file}`);
+    modified = true;
+  }
+
+  // 13. OpenCode FreeTierError fix (5330.js / 318.js):
+  // OpenCode's new inference proxy validates the 6-byte timestamp encoded in
+  // x-opencode-session (ses_<12-hex><14-base62>, descending ~(now*4096+counter))
+  // and x-opencode-request (msg_<12-hex><14-base62>, ascending now*4096+1).
+  // 9Router's B() and opencode-req hashed conversation/prompt strings with SHA-256
+  // and put raw hash bytes into the 12-hex timestamp prefix, causing 403 FreeTierError.
+  const oldOcSesB = `function B(a,b=""){if("string"==typeof a&&s.test(a.trim()))return a.trim();let c=e().createHash("sha256").update(\`opencode\\0\${b||"generic"}\\0\${a||""}\`).digest(),d=c.subarray(0,6).toString("hex"),f="";for(let a=6;a<20;a++)f+=u[c[a]%62];return\`ses_\${d}\${f}\`}`;
+  const newOcSesB = `function B(a,b=""){if("string"==typeof a&&s.test(a.trim()))return a.trim();let k=\`opencode:b:\${b||"generic"}:\${a||""}\`,l=D.get(k);if(l)return l.lastUsed=Date.now(),D.delete(k),D.set(k,l),l.sessionId;let c=e().createHash("sha256").update(\`opencode\\0\${b||"generic"}\\0\${a||""}\`).digest(),n=Date.now();n!==x&&(x=n,y=0),y++;let t=~(4096n*BigInt(n)+BigInt(y)),d=Array.from({length:6},(a,b)=>Number(t>>BigInt(40-8*b)&255n).toString(16).padStart(2,"0")).join(""),f="";for(let a=6;a<20;a++)f+=u[c[a]%62];let m=\`ses_\${d}\${f}\`;return D.size>=1e3&&D.delete(D.keys().next().value),D.set(k,{sessionId:m,lastUsed:n}),m}`;
+  if (content.includes(oldOcSesB)) {
+    content = content.replace(oldOcSesB, newOcSesB);
+    console.log(`[FIX] Fixed OpenCode x-opencode-session (ses_) descending timestamp encoding in ${file}`);
+    modified = true;
+  }
+  const oldOcReqId = `let d=e().createHash("sha256").update(\`opencode-req\\0\${a||""}\\0\${c}\`).digest(),f=d.subarray(0,6).toString("hex"),g="";for(let a=6;a<20;a++)g+=u[d[a]%62];let h=\`msg_\${f}\${g}\`;return t.test(h)?h:A()`;
+  const newOcReqId = `let d=e().createHash("sha256").update(\`opencode-req\\0\${a||""}\\0\${c}\`).digest(),f=Array.from({length:6},(a,b)=>Number((4096n*BigInt(Date.now())+1n)>>BigInt(40-8*b)&255n).toString(16).padStart(2,"0")).join(""),g="";for(let a=6;a<20;a++)g+=u[d[a]%62];let h=\`msg_\${f}\${g}\`;return t.test(h)?h:A()`;
+  if (content.includes(oldOcReqId)) {
+    content = content.replace(oldOcReqId, newOcReqId);
+    console.log(`[FIX] Fixed OpenCode x-opencode-request (msg_) ascending timestamp encoding in ${file}`);
+    modified = true;
+  }
+  const oldOcHdr = `"User-Agent":g?f:"opencode/1.18.31","x-opencode-client":e["x-opencode-client"]||"desktop","x-opencode-session":h,"x-opencode-request":j`;
+  const newOcHdr = `"User-Agent":g?f:"opencode/1.19.0 ai-sdk/provider-utils/4.0.40 runtime/bun/1.3.14","x-opencode-client":e["x-opencode-client"]||"desktop","x-opencode-session":h,"x-opencode-session-id":h,"x-opencode-request":j`;
+  if (content.includes(oldOcHdr)) {
+    content = content.replace(oldOcHdr, newOcHdr);
+    console.log(`[FIX] Updated OpenCode User-Agent to 1.19.0 and added x-opencode-session-id in ${file}`);
     modified = true;
   }
 
