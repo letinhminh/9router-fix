@@ -3,3 +3,4 @@
 backup/
 *.bak*
 *.tmp
+*.patched

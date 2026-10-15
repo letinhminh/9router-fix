@@ -76,12 +76,22 @@ for (const file of files) {
     modified = true;
   }
 
-  // 3. Expand fingerprint tools to all 4 required quartet tools [bash, read, glob, grep]
-  const oldU = `u=[{type:"function",function:{name:"bash",description:"This tool is currently unavailable and must not be used.",parameters:{type:"object",properties:{}}}},{type:"function",function:{name:"read",description:"This tool is currently unavailable and must not be used.",parameters:{type:"object",properties:{}}}}],v=[{type:"function",name:"bash",description:"This tool is currently unavailable and must not be used.",parameters:{type:"object",properties:{}}},{type:"function",name:"read",description:"This tool is currently unavailable and must not be used.",parameters:{type:"object",properties:{}}}];`;
-  const newU = `u=[{type:"function",function:{name:"bash",description:"This tool is currently unavailable and must not be used.",parameters:{type:"object",properties:{}}}},{type:"function",function:{name:"read",description:"This tool is currently unavailable and must not be used.",parameters:{type:"object",properties:{}}}},{type:"function",function:{name:"glob",description:"This tool is currently unavailable and must not be used.",parameters:{type:"object",properties:{}}}},{type:"function",function:{name:"grep",description:"This tool is currently unavailable and must not be used.",parameters:{type:"object",properties:{}}}}],v=[{type:"function",name:"bash",description:"This tool is currently unavailable and must not be used.",parameters:{type:"object",properties:{}}},{type:"function",name:"read",description:"This tool is currently unavailable and must not be used.",parameters:{type:"object",properties:{}}},{type:"function",name:"glob",description:"This tool is currently unavailable and must not be used.",parameters:{type:"object",properties:{}}},{type:"function",name:"grep",description:"This tool is currently unavailable and must not be used.",parameters:{type:"object",properties:{}}}];`;
-  if (content.includes(oldU)) {
-    content = content.replace(oldU, newU);
-    console.log(`[FIX] Expanded fingerprint tools to full quartet [bash, read, glob, grep] in ${file}`);
+  // 3. OpenCode tool schemas fix (8499.js / module 60210):
+  // Upstream OpenCode expects real tool schemas and [shell, glob, grep, read] with strict: false.
+  // When clients (like Claude) use 'bash', map it to 'shell', and inject valid schema definitions.
+  const oldToolFunc = `let d=["bash","glob","grep","read"],e=new WeakMap;function f(a){let b=String(a??"").trim().toLowerCase();return d.includes(b)?b:""}`;
+  const realR = `{glob:{description:\x27Search file paths using a glob pattern (examples: "**/*.ts", "src/**/*.tsx").\x27,parameters:{type:"object",properties:{pattern:{type:"string",description:"Glob pattern to match files against"},path:{type:"string",description:"Directory to search. Defaults to current directory."},hidden:{type:"boolean",description:"Include hidden files (default: false)."},limit:{type:"integer",description:"Max matches (default: 100)"}},required:["pattern"],additionalProperties:!1}},grep:{description:"Search file contents using ripgrep syntax.",parameters:{type:"object",properties:{pattern:{type:"string",minLength:1,description:"Regex pattern to match"},path:{type:"string",description:"File or directory to search"},include:{type:"string",description:"Glob filter"},literal:{type:"boolean",description:"Treat pattern as exact text"},caseSensitive:{type:"boolean",description:"Use case-sensitive matching"},limit:{type:"integer",description:"Max matches (default: 100)"}},required:["pattern"],additionalProperties:!1}},read:{description:"Read the contents of a file or directory.",parameters:{type:"object",properties:{path:{type:"string",description:"File or directory to read"},offset:{type:"integer",description:"Line to start reading from"},limit:{type:"integer",description:"Max lines to read"}},required:["path"],additionalProperties:!1}},shell:{description:"Execute a shell command and return its output.",parameters:{type:"object",properties:{command:{type:"string",description:"Shell command string to execute"},workdir:{type:"string",description:"Working directory"},timeout:{type:"integer",description:"Timeout in milliseconds"},background:{type:"boolean",description:"Run in background"}},required:["command"],additionalProperties:!1}}}`;
+  const newToolFunc = `let d=["shell","glob","grep","read"],_R=${realR},e=new WeakMap;function f(a){let b=String(a??"").trim().toLowerCase();return"bash"===b?"shell":d.includes(b)?b:""}`;
+  if (content.includes(oldToolFunc)) {
+    content = content.replace(oldToolFunc, newToolFunc);
+    console.log(`[FIX] Updated tool names to [shell, glob, grep, read] and added bash->shell mapping in ${file}`);
+    modified = true;
+  }
+  const oldDummyInject = `c.push(b?{type:"function",name:a,description:"This tool is currently unavailable and must not be used.",parameters:{type:"object",properties:{}}}:{type:"function",function:{name:a,description:"This tool is currently unavailable and must not be used.",parameters:{type:"object",properties:{}}}})`;
+  const newRealInject = `c.push(b?{type:"function",name:a,description:_R[a]?.description||a,parameters:_R[a]?.parameters||{type:"object",properties:{}},strict:!1}:{type:"function",function:{name:a,description:_R[a]?.description||a,parameters:_R[a]?.parameters||{type:"object",properties:{}},strict:!1}})`;
+  if (content.includes(oldDummyInject)) {
+    content = content.replace(oldDummyInject, newRealInject);
+    console.log(`[FIX] Injected real quartet tool schemas with strict: false in ${file}`);
     modified = true;
   }
 
@@ -182,11 +192,45 @@ for (const file of files) {
     console.log(`[FIX] Fixed OpenCode x-opencode-request (msg_) ascending timestamp encoding in ${file}`);
     modified = true;
   }
-  const oldOcHdr = `"User-Agent":g?f:"opencode/1.18.31","x-opencode-client":e["x-opencode-client"]||"desktop","x-opencode-session":h,"x-opencode-request":j`;
-  const newOcHdr = `"User-Agent":g?f:"opencode/1.19.0 ai-sdk/provider-utils/4.0.40 runtime/bun/1.3.14","x-opencode-client":e["x-opencode-client"]||"desktop","x-opencode-session":h,"x-opencode-session-id":h,"x-opencode-request":j`;
-  if (content.includes(oldOcHdr)) {
-    content = content.replace(oldOcHdr, newOcHdr);
-    console.log(`[FIX] Updated OpenCode User-Agent to 1.19.0 and added x-opencode-session-id in ${file}`);
+  const oldOcHdr18 = `"User-Agent":g?f:"opencode/1.18.31","x-opencode-client":e["x-opencode-client"]||"desktop","x-opencode-session":h,"x-opencode-request":j`;
+  const oldOcHdr19 = `"User-Agent":g?f:"opencode/1.19.0 ai-sdk/provider-utils/4.0.40 runtime/bun/1.3.14","x-opencode-client":e["x-opencode-client"]||"desktop","x-opencode-session":h,"x-opencode-session-id":h,"x-opencode-request":j`;
+  const newOcHdr = `"User-Agent":g?f:"opencode/latest/2.0.29/cli","x-opencode-client":e["x-opencode-client"]||"cli","x-opencode-session":h,"x-opencode-session-id":h,"x-session-affinity":h,"x-session-id":h,"x-opencode-request-id":j,"x-opencode-project":e["x-opencode-project"]||"global"`;
+  if (content.includes(oldOcHdr18)) {
+    content = content.replace(oldOcHdr18, newOcHdr);
+    console.log(`[FIX] Updated OpenCode User-Agent to official CLI format (2.0.29) in ${file}`);
+    modified = true;
+  } else if (content.includes(oldOcHdr19)) {
+    content = content.replace(oldOcHdr19, newOcHdr);
+    console.log(`[FIX] Updated OpenCode User-Agent to official CLI format (2.0.29) in ${file}`);
+    modified = true;
+  }
+  // Remove forbidden legacy header x-opencode-request if present
+  const badReqHdr = `"x-opencode-request-id":j,"x-opencode-request":j,`;
+  if (content.includes(badReqHdr)) {
+    content = content.replace(badReqHdr, `"x-opencode-request-id":j,`);
+    console.log(`[FIX] Stripped forbidden legacy x-opencode-request header in ${file}`);
+    modified = true;
+  }
+
+  // 14. Route OpenCode to official inference endpoint (/inference/v1 instead of /zen/v1) and prompt_cache_key
+  const oldBuildUrl = "buildUrl(a){let b=this.config.baseUrl;return H(a)?`${b}/zen/v1/responses`:w.has(G(a))?`${b}/zen/v1/messages`:`${b}/zen/v1/chat/completions`}";
+  const newBuildUrl = "buildUrl(a){let b=this.config.baseUrl;return H(a)?`${b}/inference/v1/responses`:w.has(G(a))?`${b}/inference/v1/messages`:`${b}/inference/v1/chat/completions`}";
+  if (content.includes(oldBuildUrl)) {
+    content = content.replace(oldBuildUrl, newBuildUrl);
+    console.log(`[FIX] Routed OpenCode to official /inference/v1 endpoint in ${file}`);
+    modified = true;
+  }
+  const oldPromptCache = `b.stream=!0,b.store=!1,function(a){if(!Array.isArray(a.tools))`;
+  const newPromptCache = `b.stream=!0,b.store=!1,b.prompt_cache_key=d?.[q]||B("generic"),function(a){if(!Array.isArray(a.tools))`;
+  if (content.includes(oldPromptCache)) {
+    content = content.replace(oldPromptCache, newPromptCache);
+    console.log(`[FIX] Added prompt_cache_key session affinity in ${file}`);
+    modified = true;
+  }
+  const intermediatePromptCache = `b.stream=!0,b.store=!1,c?.[q]&&(b.prompt_cache_key=c[q]),function(a){if(!Array.isArray(a.tools))`;
+  if (content.includes(intermediatePromptCache)) {
+    content = content.replace(intermediatePromptCache, newPromptCache);
+    console.log(`[FIX] Corrected prompt_cache_key credentials parameter in ${file}`);
     modified = true;
   }
 

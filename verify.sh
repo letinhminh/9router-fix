@@ -5,7 +5,7 @@ set -uo pipefail
 
 PORT="${NINEROUTER_PORT:-20128}"
 BASE="http://127.0.0.1:${PORT}"
-MODEL="${NINEROUTER_MODEL:-claude-1M-free}"
+MODEL="${NINEROUTER_MODEL:-claude-free}"
 DATA_DIR="${DATA_DIR:-$HOME/.9router}"
 PATCHES_DIR="$(cd "$(dirname "$0")" && pwd)"
 
