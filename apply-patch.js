@@ -137,6 +137,13 @@ for (const file of files) {
     console.log(`[FIX] Patched combo runner to never abort prematurely when other models exist in ${file}`);
     modified = true;
   }
+  const oldComboFallbackCheck104 = `let{shouldFallback:j,cooldownMs:k}=(0,d.hk)(f.status,h);if(!j)return g.warn("COMBO",\`Model \${e} failed (no fallback)\`,{status:f.status}),f;`;
+  const newComboFallbackCheck104 = `let{shouldFallback:j,cooldownMs:k}=(0,d.hk)(f.status,h);if(!j&&b<o.length-1)j=!0;if(!j)return g.warn("COMBO",\`Model \${e} failed (no fallback)\`,{status:f.status}),f;`;
+  if (content.includes(oldComboFallbackCheck104)) {
+    content = content.replace(oldComboFallbackCheck104, newComboFallbackCheck104);
+    console.log(`[FIX] Patched combo runner to never abort prematurely when other models exist (0.5.104) in ${file}`);
+    modified = true;
+  }
 
   // 7. OpenCode Responses API sanitizer & debug dumper in 318.js
   const oldToolNameExtract = `d=("string"==typeof a.name?a.name:"string"==typeof c?.name?c.name:"").trim()`;
@@ -183,6 +190,13 @@ for (const file of files) {
   if (content.includes(oldOcSesB)) {
     content = content.replace(oldOcSesB, newOcSesB);
     console.log(`[FIX] Fixed OpenCode x-opencode-session (ses_) descending timestamp encoding in ${file}`);
+    modified = true;
+  }
+  const oldOcSesA104 = 'function A(a,b=""){if("string"==typeof a&&r.test(a.trim()))return a.trim();let c=e().createHash("sha256").update(`opencode\\0${b||"generic"}\\0${a||""}`).digest(),d=z(BigInt(`0x${c.subarray(0,5).toString("hex")}`)&y,1),f="";for(let a=6;a<20;a++)f+=s[c[a]%62];return`ses_${d}${f}`}';
+  const newOcSesA104 = 'function A(a,b=""){if("string"==typeof a&&r.test(a.trim()))return a.trim();let k=`opencode:b:${b||"generic"}:${a||""}`,l=C.get(k);if(l)return l.lastUsed=Date.now(),C.delete(k),C.set(k,l),l.sessionId;let c=e().createHash("sha256").update(`opencode\\0${b||"generic"}\\0${a||""}`).digest(),n=Date.now();n!==v&&(v=n,w=0),w++;let d=z(n,w),f="";for(let a=6;a<20;a++)f+=s[c[a]%62];let m=`ses_${d}${f}`;return C.size>=1e3&&C.delete(C.keys().next().value),C.set(k,{sessionId:m,lastUsed:n}),m}';
+  if (content.includes(oldOcSesA104)) {
+    content = content.replace(oldOcSesA104, newOcSesA104);
+    console.log(`[FIX] Fixed OpenCode x-opencode-session (ses_) monotonic descending timestamp (0.5.104) in ${file}`);
     modified = true;
   }
   const oldOcReqId = `let d=e().createHash("sha256").update(\`opencode-req\\0\${a||""}\\0\${c}\`).digest(),f=d.subarray(0,6).toString("hex"),g="";for(let a=6;a<20;a++)g+=u[d[a]%62];let h=\`msg_\${f}\${g}\`;return t.test(h)?h:A()`;
@@ -244,6 +258,13 @@ for (const file of files) {
     console.log(`[FIX] Map thinking-disabled to "minimal" instead of unsupported "none" in ${file}`);
     modified = true;
   }
+  const oldOcReasoning104 = '("max"===h||"ultra"===h)&&g?.length&&!g.includes(h)&&("ultra"===h&&g.includes("max")?h="max":g.includes("xhigh")&&(h="xhigh")),b.reasoning={...d,effort:h}';
+  const newOcReasoning104 = '("none"===h||"off"===h)&&(h="minimal"),("max"===h||"ultra"===h)&&g?.length&&!g.includes(h)&&("ultra"===h&&g.includes("max")?h="max":g.includes("xhigh")&&(h="xhigh")),b.reasoning={...d,effort:h}';
+  if (content.includes(oldOcReasoning104) && !content.includes('("none"===h||"off"===h)&&(h="minimal")')) {
+    content = content.replace(oldOcReasoning104, newOcReasoning104);
+    console.log(`[FIX] Mapped OpenCode reasoning_effort "none" -> "minimal" (0.5.104) in ${file}`);
+    modified = true;
+  }
 
   // 9. Non-stream Anthropic conversion for forceStream providers (8895.js).
   // The `!stream && forceStream` branch accumulates the upstream stream into an
@@ -275,7 +296,14 @@ for (const file of files) {
   const newRespCond = 'if((b===d.h.OPENAI||b===d.h.OPENAI_RESPONSES)&&c===d.h.CLAUDE)return function(a){if(!a?.choices?.[0])return a;';
   if (content.includes(oldRespCond)) {
     content = content.replace(oldRespCond, newRespCond);
-    console.log(`[FIX] Allow openai-responses→claude conversion in ${file}`);
+    console.log(`[FIX] Allow openai-responses->claude conversion in ${file}`);
+    modified = true;
+  }
+  const oldRespCond104 = 'if(b===d.h.OPENAI&&c===d.h.CLAUDE)return(0,f.F)(a);';
+  const newRespCond104 = 'if((b===d.h.OPENAI||b===d.h.OPENAI_RESPONSES)&&c===d.h.CLAUDE)return(0,f.F)(a);';
+  if (content.includes(oldRespCond104)) {
+    content = content.replace(oldRespCond104, newRespCond104);
+    console.log(`[FIX] Allow openai-responses->claude conversion (0.5.104) in ${file}`);
     modified = true;
   }
 
@@ -288,7 +316,14 @@ for (const file of files) {
   const p11Replace3 = 'e.thoughtsTokenCount>0&&(k.usage.completion_tokens_details={reasoning_tokens:e.thoughtsTokenCount})),c===d.h.CLAUDE?_toClaude(k):k}';
   if (content.includes(p11Target1) && content.includes(p11Target2) && content.includes(p11Target3)) {
     content = content.replace(p11Target1, p11Replace1).replace(p11Target2, p11Replace2).replace(p11Target3, p11Replace3);
-    console.log(`[FIX] Added Gemini/Vertex→Claude non-stream conversion in ${file}`);
+    console.log(`[FIX] Added Gemini/Vertex->Claude non-stream conversion in ${file}`);
+    modified = true;
+  }
+  const oldGeminiRet104 = 'e.thoughtsTokenCount>0&&(k.usage.completion_tokens_details={reasoning_tokens:e.thoughtsTokenCount})),k}';
+  const newGeminiRet104 = 'e.thoughtsTokenCount>0&&(k.usage.completion_tokens_details={reasoning_tokens:e.thoughtsTokenCount})),c===d.h.CLAUDE?(0,f.F)(k):k}';
+  if (content.includes(oldGeminiRet104)) {
+    content = content.replace(oldGeminiRet104, newGeminiRet104);
+    console.log(`[FIX] Added Gemini/Vertex->Claude non-stream conversion (0.5.104) in ${file}`);
     modified = true;
   }
 

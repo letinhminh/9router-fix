@@ -17,7 +17,7 @@ chmod +x *.sh *.py
 
 ---
 
-## 🛠️ Danh sách các bản vá (Patches 1 → 14)
+## 🛠️ Danh sách các bản vá (Patches 1 → 14 - Tương thích 9Router v0.5.95 → v0.5.104+)
 
 | Patch | Tệp chunk vá | Lỗi giải quyết |
 | :--- | :--- | :--- |
@@ -26,14 +26,14 @@ chmod +x *.sh *.py
 | **#3** | `318.js` / `5330.js` / `8499.js` | **Tool Quartet Schemas & Bidirectional Mapping**: Cung cấp schema chuẩn cho bộ tứ `[shell, glob, grep, read]` với `strict: false`. Tự động dịch `bash` $\leftrightarrow$ `shell` giữa Claude và OpenCode. |
 | **#4** | `318.js` / `5330.js` | **ForceStream for OpenCode**: Ép chế độ stream cho provider OpenCode. |
 | **#5** | `5330.js` | **Fallback on 400**: Cho phép Combo tự động fallback khi gặp lỗi tham số upstream (400 Invalid Parameter). |
-| **#6** | `8910.js` | **Combo Runner Loop Index Shadow**: Sửa lỗi biến loop index `_ci` bị biến response `b` ghi đè khiến 9Router ngắt fallback sớm dù còn model. |
-| **#7, 7b, 7c** | `318.js` / `5330.js` | **OpenCode Sanitizer & Debug Dumper**: Chuẩn hóa tên tool (`^[a-zA-Z0-9_-]+$`), ghép cặp function call & output, ghi log debug nếu lỗi (hỗ trợ cả 0.5.91 và 0.5.95). |
-| **#8** | `8499.js` | **Thinking Disabled Mapping**: Map `thinking: disabled` thành `minimal` thay vì `none` (OpenAI format không nhận `none`). |
+| **#6** | `8910.js` | **Combo Runner Loop Fallback (0.5.95 & 0.5.104)**: Sửa lỗi 9Router ngắt fallback sớm khi model gặp lỗi 400 (do biến loop index hoặc logic check `shouldFallback: false`). Đảm bảo luôn fallback sang model tiếp theo nếu chưa phải model cuối cùng. |
+| **#7, 7b, 7c** | `318.js` / `5330.js` | **OpenCode Sanitizer & Debug Dumper**: Chuẩn hóa tên tool (`^[a-zA-Z0-9_-]+$`), ghép cặp function call & output, ghi log debug nếu lỗi (hỗ trợ cả 0.5.91, 0.5.95 và 0.5.104). |
+| **#8** | `8499.js` / `5330.js` | **Thinking Disabled Mapping (`none` $\to$ `minimal`)**: Map `thinking: disabled` thành `minimal` thay vì `none` trong cả translator và OpenCode provider (tránh lỗi 400 Bad Request do OpenCode từ chối `reasoning_effort: "none"`). |
 | **#9** | `8895.js` | **OpenAI → Anthropic non-stream for forceStream**: Chuyển đổi body về định dạng Anthropic cho auto-mode classifier của OpenCode. |
-| **#10** | `8895.js` | **Responses → Claude accumulator**: Hỗ trợ chuyển đổi stream accumulator của OpenAI Responses sang Claude. |
+| **#10** | `8895.js` | **Responses → Claude accumulator (0.5.95 & 0.5.104)**: Hỗ trợ chuyển đổi stream accumulator của OpenAI Responses sang Claude. |
 | **#11** | `8895.js` (module 5016) | **Gemini/Antigravity/Vertex → Anthropic non-stream**: Sửa lỗi 9Router trả object `chat.completion` của OpenAI cho request `/v1/messages` non-stream khiến Claude Code classifier fail. |
 | **#12** | `8499.js` & `8895.js` | **Tool Call Argument Normalizer (Fix `Bash: missing command`)**: Tự động map `cmd`, `script`, `command_line`, `input`, `code` $\rightarrow$ `command` cho tool `Bash`; map `path` $\rightarrow$ `file_path` cho `Read/Edit/Write`; map `query` $\rightarrow$ `pattern` cho `Glob/Grep`. Ngăn chặn `InputValidationError`. |
-| **#13** | `318.js` / `5330.js` | **OpenCode Timestamp Encoding**: Sửa thuật toán sinh session ID `ses_<12-hex><14-base62>` theo descending bitwise timestamp `~(4096n * BigInt(now) + BigInt(counter))` chuẩn OpenCode 2.0. |
+| **#13** | `318.js` / `5330.js` | **OpenCode Timestamp Encoding (0.5.95 & 0.5.104)**: Sửa thuật toán sinh session ID `ses_<12-hex><14-base62>` theo descending bitwise timestamp `~(4096n * BigInt(now) + BigInt(counter))` chuẩn OpenCode 2.0 (thay vì hash SHA-256 gây 403 FreeTierError). |
 | **#14** | `5330.js` / `8499.js` | **OpenCode Upstream Routing to Official `/inference/v1/responses`, Header Cleanup & `prompt_cache_key`**: Định tuyến sang endpoint chính thức `/inference/v1/responses` (thay vì `/zen/v1` bị chặn), loại bỏ header cấm `x-opencode-request` (chỉ dùng `x-opencode-request-id`), bổ sung `prompt_cache_key` trùng Session ID, cập nhật User-Agent `opencode/latest/2.0.29/cli`. Hoàn toàn không cần CLI/daemon, đổi IP VPN reset quota bình thường! |
 
 ---
