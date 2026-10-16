@@ -87,6 +87,13 @@ for (const file of files) {
     console.log(`[FIX] Updated tool names to [shell, glob, grep, read] and added bash->shell mapping in ${file}`);
     modified = true;
   }
+  const oldToolFunc104 = 'function g(a){let b=String(a??"").trim();return d.includes(b)?b:""}';
+  const newToolFunc104 = 'function g(a){let b=String(a??"").trim().toLowerCase();return"bash"===b?"shell":d.includes(b)?b:""}';
+  if (content.includes(oldToolFunc104)) {
+    content = content.replace(oldToolFunc104, newToolFunc104);
+    console.log(`[FIX] Added bash->shell mapping in tool detector (0.5.104) in ${file}`);
+    modified = true;
+  }
   const oldDummyInject = `c.push(b?{type:"function",name:a,description:"This tool is currently unavailable and must not be used.",parameters:{type:"object",properties:{}}}:{type:"function",function:{name:a,description:"This tool is currently unavailable and must not be used.",parameters:{type:"object",properties:{}}}})`;
   const newRealInject = `c.push(b?{type:"function",name:a,description:_R[a]?.description||a,parameters:_R[a]?.parameters||{type:"object",properties:{}},strict:!1}:{type:"function",function:{name:a,description:_R[a]?.description||a,parameters:_R[a]?.parameters||{type:"object",properties:{}},strict:!1}})`;
   if (content.includes(oldDummyInject)) {
