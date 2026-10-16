@@ -177,12 +177,17 @@ for (const file of files) {
     modified = true;
   }
 
-  // 7c. Instrument debug dump on failure in OpenCode execute()
+  // 7c & 15. OpenCode execute(): Failure dumper + Cloudflare WARP proxy routing + auto-rotation on 429/403
   const oldExecute = `async execute(a){return super.execute({...a,credentials:this.prepareRequestCredentials(a)})}`;
-  const newExecute = `async execute(a){let b=await super.execute({...a,credentials:this.prepareRequestCredentials(a)});if(!b.response.ok){try{const fs=require("fs");fs.writeFileSync("/tmp/last_opencode_failed_request.json",JSON.stringify(b.transformedBody,null,2));fs.writeFileSync("/tmp/last_opencode_failed_headers.json",JSON.stringify(b.headers,null,2));b.response.clone().text().then(t=>fs.writeFileSync("/tmp/last_opencode_failed_response.json",t)).catch(()=>{});}catch(e){}}return b;}`;
+  const prevExecute = `async execute(a){let b=await super.execute({...a,credentials:this.prepareRequestCredentials(a)});if(!b.response.ok){try{const fs=require("fs");fs.writeFileSync("/tmp/last_opencode_failed_request.json",JSON.stringify(b.transformedBody,null,2));fs.writeFileSync("/tmp/last_opencode_failed_headers.json",JSON.stringify(b.headers,null,2));b.response.clone().text().then(t=>fs.writeFileSync("/tmp/last_opencode_failed_response.json",t)).catch(()=>{});}catch(e){}}return b;}`;
+  const warpExecute = `async execute(a){let _fs=require("fs"),_os=require("os"),_cp=require("child_process");let _m=_os.homedir()+"/.9router/patches/.warp_enabled";let _w=process.env.OPENCODE_PROXY||(_fs.existsSync(_m)?"http://127.0.0.1:40000":null);if(_w&&!a.proxyOptions){a={...a,proxyOptions:{enabled:!0,url:_w}};}let b=await super.execute({...a,credentials:this.prepareRequestCredentials(a)});if(!b.response.ok){try{_fs.writeFileSync("/tmp/last_opencode_failed_request.json",JSON.stringify(b.transformedBody,null,2));_fs.writeFileSync("/tmp/last_opencode_failed_headers.json",JSON.stringify(b.headers,null,2));b.response.clone().text().then(t=>_fs.writeFileSync("/tmp/last_opencode_failed_response.json",t)).catch(()=>{});}catch(e){}if((429===b.response.status||403===b.response.status)&&!a._didRotate){let _sh=process.env.OPENCODE_ROTATE_SCRIPT||[_os.homedir()+"/.9router/patches/rotate-ip.sh",_os.homedir()+"/Claude/remote-git/9router-fix/rotate-ip.sh"].find(p=>_fs.existsSync(p));if(_sh){let _now=Date.now(),_last=this.constructor._lastRot||0;if(_now-_last>6000){this.constructor._lastRot=_now;try{console.log(\`[OPENCODE] HTTP \${b.response.status} detected. Auto-rotating WARP proxy IP via \${_sh}...\`);_cp.execSync(\`bash "\${_sh}" rotate\`,{timeout:15000,stdio:"inherit"})}catch(err){console.error("[OPENCODE] Auto-rotate script failed:",err.message)}}else{await new Promise(r=>setTimeout(r,Math.max(500,6000-(_now-_last))))}try{if(typeof C!=="undefined"&&C.clear)C.clear()}catch(e){}return this.execute({...a,_didRotate:!0,proxyOptions:{enabled:!0,url:process.env.OPENCODE_PROXY||"http://127.0.0.1:40000"}});}}}return b;}`;
   if (content.includes(oldExecute)) {
-    content = content.replace(oldExecute, newExecute);
-    console.log(`[FIX] Added failure dumper to execute() in ${file}`);
+    content = content.replace(oldExecute, warpExecute);
+    console.log(`[FIX] Added WARP proxy routing & auto-rotation to execute() in ${file}`);
+    modified = true;
+  } else if (content.includes(prevExecute)) {
+    content = content.replace(prevExecute, warpExecute);
+    console.log(`[FIX] Upgraded execute() with WARP proxy routing & auto-rotation in ${file}`);
     modified = true;
   }
 

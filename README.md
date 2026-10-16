@@ -17,7 +17,7 @@ chmod +x *.sh *.py
 
 ---
 
-## 🛠️ Danh sách các bản vá (Patches 1 → 14 - Tương thích 9Router v0.5.95 → v0.5.104+)
+## 🛠️ Danh sách các bản vá (Patches 1 → 15 - Tương thích 9Router v0.5.95 → v0.5.104+)
 
 | Patch | Tệp chunk vá | Lỗi giải quyết |
 | :--- | :--- | :--- |
@@ -34,7 +34,38 @@ chmod +x *.sh *.py
 | **#11** | `8895.js` (module 5016) | **Gemini/Antigravity/Vertex → Anthropic non-stream**: Sửa lỗi 9Router trả object `chat.completion` của OpenAI cho request `/v1/messages` non-stream khiến Claude Code classifier fail. |
 | **#12** | `8499.js` & `8895.js` | **Tool Call Argument Normalizer (Fix `Bash: missing command`)**: Tự động map `cmd`, `script`, `command_line`, `input`, `code` $\rightarrow$ `command` cho tool `Bash`; map `path` $\rightarrow$ `file_path` cho `Read/Edit/Write`; map `query` $\rightarrow$ `pattern` cho `Glob/Grep`. Ngăn chặn `InputValidationError`. |
 | **#13** | `318.js` / `5330.js` | **OpenCode Timestamp Encoding (0.5.95 & 0.5.104)**: Sửa thuật toán sinh session ID `ses_<12-hex><14-base62>` theo descending bitwise timestamp `~(4096n * BigInt(now) + BigInt(counter))` chuẩn OpenCode 2.0 (thay vì hash SHA-256 gây 403 FreeTierError). |
-| **#14** | `5330.js` / `8499.js` | **OpenCode Upstream Routing to Official `/inference/v1/responses`, Header Cleanup & `prompt_cache_key`**: Định tuyến sang endpoint chính thức `/inference/v1/responses` (thay vì `/zen/v1` bị chặn), loại bỏ header cấm `x-opencode-request` (chỉ dùng `x-opencode-request-id`), bổ sung `prompt_cache_key` trùng Session ID, cập nhật User-Agent `opencode/latest/2.0.29/cli`. Hoàn toàn không cần CLI/daemon, đổi IP VPN reset quota bình thường! |
+| **#14** | `5330.js` / `8499.js` | **OpenCode Upstream Routing to Official `/inference/v1/responses`, Header Cleanup & `prompt_cache_key`**: Định tuyến sang endpoint chính thức `/inference/v1/responses` (thay vì `/zen/v1` bị chặn), loại bỏ header cấm `x-opencode-request` (chỉ dùng `x-opencode-request-id`), bổ sung `prompt_cache_key` trùng Session ID, cập nhật User-Agent `opencode/latest/2.0.29/cli`. |
+| **#15** | `5330.js` & `rotate-ip.sh` | **Cloudflare WARP Proxy Routing & Tự động Đổi IP khi Rate Limit (429/403)**: Tích hợp proxy cục bộ (`127.0.0.1:40000`) qua Cloudflare WARP. Tự động bắt mã lỗi 429 / 403, kích hoạt `rotate-ip.sh rotate` (với 6s debounce), reset session cache và tự động retry request với IP mới. Hoàn toàn không làm ảnh hưởng mạng internet của các ứng dụng khác trên máy! |
+
+---
+
+## 🌐 Tự Động Xoay IP Vượt Limit OpenCode Bằng Cloudflare WARP Proxy Mode
+
+OpenCode áp dụng giới hạn request theo IP (khoảng 30-50 request/phút) và trả về HTTP 429 hoặc HTTP 403 (FreeTierError). Sử dụng VPN hệ thống (như Hotspot Shield) có nhược điểm làm rớt mạng toàn máy, ngắt kết nối Zoom/Meet/chat.
+
+Giải pháp tích hợp sử dụng **Cloudflare WARP ở chế độ Local SOCKS5/HTTP Proxy** (`127.0.0.1:40000`):
+- Toàn bộ kết nối internet của máy tính (trình duyệt, chat, game...) vẫn dùng mạng Wi-Fi/Ethernet gốc 100%.
+- Chỉ riêng request từ 9Router sang OpenCode được định tuyến qua cổng proxy nội bộ 40000.
+- Khi gặp 429/403, 9Router tự động đổi IP WARP mới trong ~2 giây và retry ngay lập tức.
+
+### Cách sử dụng script `rotate-ip.sh`:
+
+```bash
+# 1. Cài đặt WARP CLI (nếu chưa có):
+brew install --cask cloudflare-warp
+
+# 2. Bật chế độ Proxy Mode và kích hoạt cho 9Router:
+./rotate-ip.sh setup
+
+# 3. Kiểm tra trạng thái IP trực tiếp vs IP WARP proxy:
+./rotate-ip.sh status
+
+# 4. Thủ công đổi IP mới bất kỳ lúc nào:
+./rotate-ip.sh rotate
+
+# 5. Tắt chế độ proxy (9Router sẽ quay về kết nối trực tiếp):
+./rotate-ip.sh disable
+```
 
 ---
 
