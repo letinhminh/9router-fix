@@ -339,27 +339,76 @@ for (const file of files) {
     modified = true;
   }
 
-  // 12. Normalize tool call arguments (Bash -> command, Read/Edit/Write -> file_path, Glob/Grep -> pattern)
+  // 12. Normalize tool call arguments (Bash/shell -> command, Read/Edit/Write -> file_path, Glob/Grep -> pattern)
   // in 8499.js (streaming SSE) and 8895.js (non-streaming _toClaude)
   const p12_8499_t1 = 'e&&d.push({type:"content_block_delta",index:c.blockIndex,delta:{type:"input_json_delta",partial_json:e}}),d.push({type:"content_block_stop",index:c.blockIndex})';
-  const p12_8499_r1 = 'let _fe=function(n,s){try{let o=JSON.parse(s);if(o&&"object"==typeof o&&!Array.isArray(o)){let l=(n||"").toLowerCase();if("bash"===l&&!o.command)o.command=o.cmd||o.script||o.command_line||o.input||o.code||"";else if(("read"===l||"fileread"===l)&&!o.file_path)o.file_path=o.path||o.filepath||o.file||"";else if(("edit"===l||"fileedit"===l)&&!o.file_path)o.file_path=o.path||o.filepath||o.file||"";else if(("write"===l||"filewrite"===l)&&!o.file_path)o.file_path=o.path||o.filepath||o.file||"";else if(("glob"===l||"globtool"===l)&&!o.pattern)o.pattern=o.glob||o.path||"*";else if(("grep"===l||"greptool"===l)&&!o.pattern)o.pattern=o.query||o.search||o.regex||"";return JSON.stringify(o)}}catch{}return s||"{}"}(c.name,e||"{}");d.push({type:"content_block_delta",index:c.blockIndex,delta:{type:"input_json_delta",partial_json:_fe}}),d.push({type:"content_block_stop",index:c.blockIndex})';
+  const p12_8499_r1 = 'let _fe=function(n,s){try{let o=JSON.parse(s);if(o&&"object"==typeof o&&!Array.isArray(o)){let l=(n||"").toLowerCase();if(("bash"===l||"shell"===l)&&!o.command)o.command=o.cmd||o.script||o.command_line||o.input||o.code||"";else if(("read"===l||"fileread"===l)&&!o.file_path)o.file_path=o.path||o.filepath||o.file||"";else if(("edit"===l||"fileedit"===l)&&!o.file_path)o.file_path=o.path||o.filepath||o.file||"";else if(("write"===l||"filewrite"===l)&&!o.file_path)o.file_path=o.path||o.filepath||o.file||"";else if(("glob"===l||"globtool"===l)&&!o.pattern)o.pattern=o.glob||o.path||"*";else if(("grep"===l||"greptool"===l)&&!o.pattern)o.pattern=o.query||o.search||o.regex||"";return JSON.stringify(o)}}catch{}return s||"{}"}(c.name,e||"{}");d.push({type:"content_block_delta",index:c.blockIndex,delta:{type:"input_json_delta",partial_json:_fe}}),d.push({type:"content_block_stop",index:c.blockIndex})';
   if (content.includes(p12_8499_t1)) {
     content = content.replace(p12_8499_t1, p12_8499_r1);
     console.log(`[FIX] Added Bash/Tool streaming normalizer in ${file}`);
     modified = true;
+  } else if (content.includes('if("bash"===l&&!o.command)')) {
+    content = content.replace('if("bash"===l&&!o.command)', 'if(("bash"===l||"shell"===l)&&!o.command)');
+    console.log(`[FIX] Upgraded Bash/Tool streaming normalizer to support shell in ${file}`);
+    modified = true;
   }
   const p12_8499_t2 = 'let a=function(a,b){try{let c=JSON.parse(b),d=a.startsWith(ae)?a.slice(ae.length):a;return"Read"===d';
-  const p12_8499_r2 = 'let a=function(a,b){try{let c=JSON.parse(b),d=a.startsWith(ae)?a.slice(ae.length):a,l=(d||"").toLowerCase();if("bash"===l&&!c.command)c.command=c.cmd||c.script||c.command_line||c.input||c.code||"";else if(("read"===l||"fileread"===l)&&!c.file_path)c.file_path=c.path||c.filepath||c.file||"";else if(("edit"===l||"fileedit"===l)&&!c.file_path)c.file_path=c.path||c.filepath||c.file||"";else if(("write"===l||"filewrite"===l)&&!c.file_path)c.file_path=c.path||c.filepath||c.file||"";else if(("glob"===l||"globtool"===l)&&!c.pattern)c.pattern=c.glob||c.path||"*";else if(("grep"===l||"greptool"===l)&&!c.pattern)c.pattern=c.query||c.search||c.regex||"";return"Read"===d';
+  const p12_8499_r2 = 'let a=function(a,b){try{let c=JSON.parse(b),d=a.startsWith(ae)?a.slice(ae.length):a,l=(d||"").toLowerCase();if(("bash"===l||"shell"===l)&&!c.command)c.command=c.cmd||c.script||c.command_line||c.input||c.code||"";else if(("read"===l||"fileread"===l)&&!c.file_path)c.file_path=c.path||c.filepath||c.file||"";else if(("edit"===l||"fileedit"===l)&&!c.file_path)c.file_path=c.path||c.filepath||c.file||"";else if(("write"===l||"filewrite"===l)&&!c.file_path)c.file_path=c.path||c.filepath||c.file||"";else if(("glob"===l||"globtool"===l)&&!c.pattern)c.pattern=c.glob||c.path||"*";else if(("grep"===l||"greptool"===l)&&!c.pattern)c.pattern=c.query||c.search||c.regex||"";return"Read"===d';
   if (content.includes(p12_8499_t2)) {
     content = content.replace(p12_8499_t2, p12_8499_r2);
     console.log(`[FIX] Added Bash/Tool response normalizer in ${file}`);
     modified = true;
+  } else if (content.includes('if("bash"===l&&!c.command)')) {
+    content = content.replace('if("bash"===l&&!c.command)', 'if(("bash"===l||"shell"===l)&&!c.command)');
+    console.log(`[FIX] Upgraded Bash/Tool response normalizer to support shell in ${file}`);
+    modified = true;
   }
   const p12_8895_t3 = 'input:function(a){if(!a)return{};if("object"==typeof a)return a;try{return JSON.parse(a)}catch{return{}}}(b.arguments||a.arguments)';
-  const p12_8895_r3 = 'input:function(n,a){let o=null;if(a&&"object"==typeof a)o=a;else try{o=JSON.parse(a)}catch{}o=o&&"object"==typeof o&&!Array.isArray(o)?o:{};let l=(n||"").toLowerCase();if("bash"===l&&!o.command)o.command=o.cmd||o.script||o.command_line||o.input||o.code||"";else if(("read"===l||"fileread"===l)&&!o.file_path)o.file_path=o.path||o.filepath||o.file||"";else if(("edit"===l||"fileedit"===l)&&!o.file_path)o.file_path=o.path||o.filepath||o.file||"";else if(("write"===l||"filewrite"===l)&&!o.file_path)o.file_path=o.path||o.filepath||o.file||"";else if(("glob"===l||"globtool"===l)&&!o.pattern)o.pattern=o.glob||o.path||"*";else if(("grep"===l||"greptool"===l)&&!o.pattern)o.pattern=o.query||o.search||o.regex||"";return o}(b.name||a.name||"",b.arguments||a.arguments)';
+  const p12_8895_r3 = 'input:function(n,a){let o=null;if(a&&"object"==typeof a)o=a;else try{o=JSON.parse(a)}catch{}o=o&&"object"==typeof o&&!Array.isArray(o)?o:{};let l=(n||"").toLowerCase();if(("bash"===l||"shell"===l)&&!o.command)o.command=o.cmd||o.script||o.command_line||o.input||o.code||"";else if(("read"===l||"fileread"===l)&&!o.file_path)o.file_path=o.path||o.filepath||o.file||"";else if(("edit"===l||"fileedit"===l)&&!o.file_path)o.file_path=o.path||o.filepath||o.file||"";else if(("write"===l||"filewrite"===l)&&!o.file_path)o.file_path=o.path||o.filepath||o.file||"";else if(("glob"===l||"globtool"===l)&&!o.pattern)o.pattern=o.glob||o.path||"*";else if(("grep"===l||"greptool"===l)&&!o.pattern)o.pattern=o.query||o.search||o.regex||"";return o}(b.name||a.name||"",b.arguments||a.arguments)';
   if (content.includes(p12_8895_t3)) {
     content = content.replace(p12_8895_t3, p12_8895_r3);
     console.log(`[FIX] Added Bash/Tool non-stream normalizer in ${file}`);
+    modified = true;
+  } else if (content.includes('if("bash"===l&&!o.command)')) {
+    content = content.replace('if("bash"===l&&!o.command)', 'if(("bash"===l||"shell"===l)&&!o.command)');
+    console.log(`[FIX] Upgraded Bash/Tool non-stream normalizer to support shell in ${file}`);
+    modified = true;
+  }
+
+  // 16. Bidirectional Tool Name Mapping for Claude Desktop (Cowork & Code) & Claude Code CLI:
+  // Maps OpenCode/upstream tool names to the exact casing and names Claude Desktop expects:
+  // shell/bash/shell_client -> Bash, read/fileread/read_client -> Read, edit -> Edit, write -> Write, glob -> Glob, grep -> Grep.
+  // Prevents "Error: No such tool available: read. Tool names are case-sensitive: call Read instead."
+  // and "Error: No such tool available: shell".
+  const p16_ke_t = 'c.add(k),b.set(k,a),';
+  const p16_ke_r = 'c.add(k),b.set(k,h(j)||a),b.set(a,h(j)||a),';
+  if (content.includes(p16_ke_t)) {
+    content = content.replace(p16_ke_t, p16_ke_r);
+    console.log(`[FIX] Added bidirectional toolNameMap in ${file}`);
+    modified = true;
+  }
+
+  const p16_an_t = 'function an(a,b){let c=b||"",d=a?.toolNameMap||a?._toolNameMap;return d&&"function"==typeof d.get&&d.has(c)?d.get(c):c}';
+  const p16_an_r = 'function an(a,b){let c=b||"",d=a?.toolNameMap||a?._toolNameMap;if(d&&"function"==typeof d.get&&d.has(c))return d.get(c);let l=c.toLowerCase();return"shell"===l||"bash"===l||"shell_client"===l?"Bash":"read"===l||"fileread"===l||"read_client"===l?"Read":"edit"===l||"fileedit"===l||"edit_client"===l?"Edit":"write"===l||"filewrite"===l||"write_client"===l?"Write":"glob"===l||"globtool"===l||"glob_client"===l?"Glob":"grep"===l||"greptool"===l||"grep_client"===l?"Grep":c}';
+  if (content.includes(p16_an_t)) {
+    content = content.replace(p16_an_t, p16_an_r);
+    console.log(`[FIX] Added bidirectional tool name mapping (an) in ${file}`);
+    modified = true;
+  }
+
+  const p16_tool_t = 'let e=b.nextBlockIndex++;b.toolCalls.set(d,{id:a.id,name:a.function?.name||"",blockIndex:e});let f=a.function?.name||"";f.startsWith(ae)&&(f=f.slice(ae.length)),c.push({type:"content_block_start",index:e,content_block:{type:k.R4.TOOL_USE,id:a.id,name:f,input:{}}})';
+  const p16_tool_r = 'let e=b.nextBlockIndex++;let f=an(b,a.function?.name||"");f.startsWith(ae)&&(f=f.slice(ae.length)),b.toolCalls.set(d,{id:a.id,name:f,blockIndex:e}),c.push({type:"content_block_start",index:e,content_block:{type:k.R4.TOOL_USE,id:a.id,name:f,input:{}}})';
+  if (content.includes(p16_tool_t)) {
+    content = content.replace(p16_tool_t, p16_tool_r);
+    console.log(`[FIX] Added an() mapper to OpenAI->Claude stream tool_use in ${file}`);
+    modified = true;
+  }
+
+  const p16_ns_t = 'g.push({type:f.R4.TOOL_USE,id:a.id||`toolu_${Date.now()}_${g.length}`,name:b.name||a.name||"",input:';
+  const p16_ns_r = 'let _toCl=function(n){let l=(n||"").toLowerCase();return"shell"===l||"bash"===l||"shell_client"===l?"Bash":"read"===l||"fileread"===l||"read_client"===l?"Read":"edit"===l||"fileedit"===l||"edit_client"===l?"Edit":"write"===l||"filewrite"===l||"write_client"===l?"Write":"glob"===l||"globtool"===l||"glob_client"===l?"Glob":"grep"===l||"greptool"===l||"grep_client"===l?"Grep":n||""};let _nm=_toCl(b.name||a.name||"");g.push({type:f.R4.TOOL_USE,id:a.id||`toolu_${Date.now()}_${g.length}`,name:_nm,input:';
+  if (content.includes(p16_ns_t)) {
+    content = content.replace(p16_ns_t, p16_ns_r);
+    console.log(`[FIX] Added tool name normalizer to non-stream _toClaude in ${file}`);
     modified = true;
   }
 

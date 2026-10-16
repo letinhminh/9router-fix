@@ -17,7 +17,7 @@ chmod +x *.sh *.py
 
 ---
 
-## 🛠️ Danh sách các bản vá (Patches 1 → 15 - Tương thích 9Router v0.5.95 → v0.5.104+)
+## 🛠️ Danh sách các bản vá (Patches 1 → 16 - Tương thích 9Router v0.5.95 → v0.5.104+)
 
 | Patch | Tệp chunk vá | Lỗi giải quyết |
 | :--- | :--- | :--- |
@@ -36,6 +36,7 @@ chmod +x *.sh *.py
 | **#13** | `318.js` / `5330.js` | **OpenCode Timestamp Encoding (0.5.95 & 0.5.104)**: Sửa thuật toán sinh session ID `ses_<12-hex><14-base62>` theo descending bitwise timestamp `~(4096n * BigInt(now) + BigInt(counter))` chuẩn OpenCode 2.0 (thay vì hash SHA-256 gây 403 FreeTierError). |
 | **#14** | `5330.js` / `8499.js` | **OpenCode Upstream Routing to Official `/inference/v1/responses`, Header Cleanup & `prompt_cache_key`**: Định tuyến sang endpoint chính thức `/inference/v1/responses` (thay vì `/zen/v1` bị chặn), loại bỏ header cấm `x-opencode-request` (chỉ dùng `x-opencode-request-id`), bổ sung `prompt_cache_key` trùng Session ID, cập nhật User-Agent `opencode/latest/2.0.29/cli`. |
 | **#15** | `5330.js` & `rotate-ip.sh` | **Cloudflare WARP Proxy Routing & Tự động Đổi IP khi Rate Limit (429/403)**: Tích hợp proxy cục bộ (`127.0.0.1:40000`) qua Cloudflare WARP. Tự động bắt mã lỗi 429 / 403, kích hoạt `rotate-ip.sh rotate` (với 6s debounce), reset session cache và tự động retry request với IP mới. Hoàn toàn không làm ảnh hưởng mạng internet của các ứng dụng khác trên máy! |
+| **#16** | `8499.js` & `8895.js` | **Claude Desktop Tool PascalCase Mapper (Fix `No such tool available: read / shell`)**: Sửa triệt để lỗi Claude Desktop app (Cowork / Code 3p) văng lỗi `No such tool available: read. Tool names are case-sensitive: call Read instead` hoặc `No such tool available: shell`. Tự động ánh xạ 2 chiều `toolNameMap` từ upstream (OpenCode dummy tools `shell`, `read`) về PascalCase chuẩn mà Claude Desktop đăng ký (`Bash`, `Read`, `Write`, `Edit`, `Glob`, `Grep`) trong cả luồng SSE stream và non-stream. |
 
 ---
 
